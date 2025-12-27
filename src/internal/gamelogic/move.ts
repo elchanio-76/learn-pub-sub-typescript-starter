@@ -60,23 +60,24 @@ export function handleMove(gs: GameState, move: ArmyMove): MoveOutcome {
 
 export function commandMove(gs: GameState, words: string[]): ArmyMove {
   if (gs.isPaused()) {
-    throw new Error("The game is paused, you cannot move units");
+    throw new Error("The game is paused, you cannot move unit\n>");
   }
 
   if (words.length < 3) {
-    throw new Error("Usage: move <location> <unitID> <unitID> ...");
+    throw new Error("Usage: move <location> <unitID> <unitID> ...\n>");
   }
 
   const newLocation = words[1];
   if (!isValidLocation(newLocation)) {
-    throw new Error(`Error: ${newLocation} is not a valid location`);
+    throw new Error(`Error: ${newLocation} is not a valid location\n>`);
   }
 
   const unitIDs: number[] = [];
   for (const word of words.slice(2)) {
     const unitID = parseInt(word, 10);
     if (isNaN(unitID)) {
-      throw new Error(`Error: ${word} is not a valid unit ID`);
+      console.log(`Error: ${word} is not a valid unit ID\n>`);
+      continue;
     }
     unitIDs.push(unitID);
   }

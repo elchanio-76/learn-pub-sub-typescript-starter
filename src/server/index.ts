@@ -1,7 +1,9 @@
 import amqp from "amqplib";
 import { publishJSON } from "../internal/pubsub/pub.js";
-import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
+import { ExchangePerilDirect, PauseKey, ExchangePerilTopic, GameLogSlug } from "../internal/routing/routing.js";
 import type { PlayingState } from "../internal/gamelogic/gamestate.js";
+import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
+import { declareAndBind } from "../internal/pubsub/queue.js";
 
 async function main() {
   console.log("Starting Peril server...");
@@ -12,16 +14,41 @@ async function main() {
   } else {
     console.log("Connected to RabbitMQ");
   }
-
+  printServerHelp()
   process.on("SIGINT", async () => {
     console.log("Shutting down Peril server...");
     await connection.close();
     process.exit(0);
   });
   const confirmChannel = await connection.createConfirmChannel();
-  const state:PlayingState = { isPaused: true };
-  
-  await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, state )
+  let state:PlayingState = { isPaused: true };
+
+  declareAndBind(connection,ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`,  "durable")
+
+  while(true) {
+    let words = await getInput();
+    if(!words) continue;
+    if(words[0] == "pause") {
+      state.isPaused = true;
+      await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, state )
+
+    } else if(words[0] == "resume") {
+      state.isPaused = false;
+      await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, state )
+
+    } else if(words[0] == "help") {
+      printServerHelp()
+    } else if(words[0] == "quit") {
+      break;
+    } else {
+      console.log("Unknown command")
+    }
+    console.log(state)
+  }
+
+  console.log("Shutting down Peril server...");
+  await connection.close();
+  process.exit(0);
 
   /*const channel = await connection.createChannel();
 
