@@ -1,9 +1,9 @@
-import amqp from "amqplib";
-import { clientWelcome, getInput, printClientHelp } from "../internal/gamelogic/gamelogic.js";
+import amqp from "amqplib"; 
+import { clientWelcome, getInput, getMaliciousLog, printClientHelp,commandStatus } from "../internal/gamelogic/gamelogic.js";
 import { setupExchanges } from "../internal/pubsub/queue.js";
 import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, PauseKey, WarRecognitionsPrefix } from "../internal/routing/routing.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
-import { commandStatus } from "../internal/gamelogic/gamelogic.js"
+
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove, handleMove } from "../internal/gamelogic/move.js";
 import { subscribeJSON } from "../internal/pubsub/sub.js";
@@ -43,6 +43,15 @@ async function main() {
       printClientHelp();
       continue;
     } else if (command[0] == "spam") {
+      if(!command[1]) {
+        console.log("Usage: spam <count>");
+        continue;
+      }
+      let count = parseInt(command[1]);
+      for(let i = 0; i < count; i++) {
+        const maliciousLog = getMaliciousLog();
+        await publishMsgPack(confirmChannel, ExchangePerilTopic, `${GameLogSlug}.${username}`, maliciousLog);
+      }
       continue;
     } else if(command[0] == "spawn") {
         

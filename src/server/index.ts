@@ -22,12 +22,7 @@ async function main() {
   await setupExchanges(connection);
   console.log("Exchanges declared");
 
-  printServerHelp()
-  process.on("SIGINT", async () => {
-    console.log("Shutting down Peril server...");
-    await connection.close();
-    process.exit(0);
-  });
+
   const confirmChannel = await connection.createConfirmChannel();
   let state:PlayingState = { isPaused: true };
 
@@ -39,6 +34,22 @@ async function main() {
     const decoded:GameLog = decode(data) as GameLog;   
     return decoded;
   });
+  console.log("Subscribed to logs queue");
+
+
+  // Used to run the server from a non-interactive source, like the multiserver.sh file
+  if (!process.stdin.isTTY) {
+    console.log("Non-interactive mode: skipping command input.");
+    return;
+  }
+
+  printServerHelp()
+  process.on("SIGINT", async () => {
+    console.log("Shutting down Peril server...");
+    await connection.close();
+    process.exit(0);
+  });
+  
 
   while(true) {
     let words = await getInput();

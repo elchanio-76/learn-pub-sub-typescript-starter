@@ -13,6 +13,7 @@ export async function subscribeMsgPack<T>(
     unmarshaller:(data: Buffer) => T
 ): Promise<void> {
     const [channel, queue] = await declareAndBind(conn, exchange, queueName, routingKey, simpleQueueType);
+    await channel.prefetch(10);
     if(!queue) {
         throw new Error("Failed to declare and bind queue");
     }

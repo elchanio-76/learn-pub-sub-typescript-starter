@@ -19,9 +19,14 @@ export async function writeLog(gameLog: GameLog): Promise<void> {
   block(writeToDiskSleep);
 
   const date = new Date(gameLog.currentTime);
-  const timestamp = date.toISOString();
+  let timestamp = "invalid date";
+  try {
+    timestamp = date.toISOString();
+    
+  } catch (err) {
+    timestamp = "invalid date";
+  }
   const logEntry = `${timestamp} ${gameLog.username}: ${gameLog.message}\n`;
-
   try {
     await appendFile(logsFile, logEntry, { flag: "a" });
   } catch (err) {
