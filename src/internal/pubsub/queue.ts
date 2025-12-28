@@ -1,6 +1,15 @@
 import amqp from "amqplib";
+import { ExchangeDeadLetter, ExchangePerilDirect, ExchangePerilTopic } from "../routing/routing.js";
 
 export type SimpleQueueType =  "durable" | "transient";
+
+export async function setupExchanges(conn: amqp.ChannelModel): Promise<void> {
+    const channel = await conn.createChannel();
+    await channel.assertExchange(ExchangePerilDirect, "direct", { durable: true });
+    await channel.assertExchange(ExchangePerilTopic, "topic", { durable: true });
+    await channel.assertExchange(ExchangeDeadLetter, "topic", { durable: true });
+    await channel.close();
+}
 
 export async function declareAndBind(
     conn: amqp.ChannelModel,
@@ -17,6 +26,7 @@ export async function declareAndBind(
             durable: queueType === "durable",
             autoDelete: queueType === "transient",
             exclusive: queueType === "transient",
+            arguments: {"x-dead-letter-exchange": ExchangeDeadLetter},
         }
     );
     await channel.bindQueue(queue, exchange, routingKey);

@@ -3,7 +3,7 @@ import { publishJSON } from "../internal/pubsub/pub.js";
 import { ExchangePerilDirect, PauseKey, ExchangePerilTopic, GameLogSlug } from "../internal/routing/routing.js";
 import type { PlayingState } from "../internal/gamelogic/gamestate.js";
 import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
-import { declareAndBind } from "../internal/pubsub/queue.js";
+import { declareAndBind, setupExchanges } from "../internal/pubsub/queue.js";
 
 async function main() {
   console.log("Starting Peril server...");
@@ -14,6 +14,10 @@ async function main() {
   } else {
     console.log("Connected to RabbitMQ");
   }
+
+  await setupExchanges(connection);
+  console.log("Exchanges declared");
+
   printServerHelp()
   process.on("SIGINT", async () => {
     console.log("Shutting down Peril server...");
@@ -30,11 +34,11 @@ async function main() {
     if(!words) continue;
     if(words[0] == "pause") {
       state.isPaused = true;
-      await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, state )
+      const pub = await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, state);
 
     } else if(words[0] == "resume") {
       state.isPaused = false;
-      await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, state )
+      const pub = await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, state);
 
     } else if(words[0] == "help") {
       printServerHelp()

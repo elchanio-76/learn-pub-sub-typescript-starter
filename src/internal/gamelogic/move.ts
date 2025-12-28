@@ -1,3 +1,5 @@
+import { publishJSON } from "../pubsub/pub.js";
+import { ExchangePerilTopic } from "../routing/routing.js";
 import {
   isValidLocation,
   type ArmyMove,
@@ -6,6 +8,7 @@ import {
   type Unit,
 } from "./gamedata.js";
 import { GameState } from "./gamestate.js";
+
 
 export enum MoveOutcome {
   SamePlayer,
@@ -98,7 +101,7 @@ export function commandMove(gs: GameState, words: string[]): ArmyMove {
     units: newUnits,
     player: gs.getPlayerSnap(),
   };
-
+  
   console.log(`Moved ${move.units.length} units to ${move.toLocation}`);
   return move;
 }

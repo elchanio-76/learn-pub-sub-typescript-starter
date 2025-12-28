@@ -1,15 +1,16 @@
 import amqp from "amqplib";
 import { clientWelcome, getInput, printClientHelp } from "../internal/gamelogic/gamelogic.js";
-import { declareAndBind } from "../internal/pubsub/queue.js";
-import { ExchangePerilDirect, GameLogSlug, PauseKey } from "../internal/routing/routing.js";
+import { setupExchanges } from "../internal/pubsub/queue.js";
+import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, PauseKey, WarRecognitionsPrefix } from "../internal/routing/routing.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandStatus } from "../internal/gamelogic/gamelogic.js"
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
-import { commandMove } from "../internal/gamelogic/move.js";
-import { subscribe } from "diagnostics_channel";
+import { commandMove, handleMove } from "../internal/gamelogic/move.js";
 import { subscribeJSON } from "../internal/pubsub/sub.js";
+import { publishJSON, publishMsgPack } from "../internal/pubsub/pub.js";
+import { handlerPause, handlerMove, handlerWar } from "../internal/pubsub/sub.js";
+import { type GameLog } from "../internal/gamelogic/logs.js";
 
-import { handlerPause } from "../internal/pubsub/sub.js";
 
 async function main() {
   console.log("Starting Peril client...");
@@ -18,13 +19,18 @@ async function main() {
     throw new Error("Failed to connect to RabbitMQ");
   }
   console.log("Connected to RabbitMQ");
-  const username = await clientWelcome();
 
-  declareAndBind(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, "transient");
+  await setupExchanges(connection);
+  console.log("Exchanges declared");
+
+  const username = await clientWelcome();
+  const confirmChannel = await connection.createConfirmChannel();
 
   let game = new GameState(username);
 
-  subscribeJSON(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, "transient", handlerPause(game))
+  subscribeJSON(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, "transient", handlerPause(connection, game));
+  await subscribeJSON(connection, ExchangePerilTopic, `army_moves.${username}`, `army_moves.*`, "transient", await  handlerMove(connection, game));
+  await subscribeJSON(connection, ExchangePerilTopic, 'war', `${WarRecognitionsPrefix}.*`, "durable", await handlerWar(connection, game))
 
   while (true) {
     // Client game loop would go here
@@ -46,6 +52,8 @@ async function main() {
     } else if(command[0] == "move") {
         let move = commandMove(game, command);
         if(move) {
+          await publishJSON(confirmChannel, ExchangePerilTopic, `army_moves.${move.player.username}`, move);
+          console.log("Move published");
         }
     } else if(command[0] == "status") {
       commandStatus(game);
@@ -55,6 +63,17 @@ async function main() {
   await connection.close();
   process.exit(0);
 }
+
+export async function publishGameLog(ch:amqp.ConfirmChannel, username: string, message: string): Promise<boolean> {
+  const gameLog: GameLog = { 
+    username: username, 
+    message: message,
+    currentTime: new Date()
+  };
+  return await publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${username}`, gameLog);
+
+}
+
 
 main().catch((err) => {
   console.error("Fatal error:", err);
