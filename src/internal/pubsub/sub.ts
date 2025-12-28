@@ -9,7 +9,7 @@ import { publishJSON } from "./pub.js";
 import { ExchangePerilTopic, WarRecognitionsPrefix, GameLogSlug } from "../routing/routing.js";
 import { WarOutcome, type WarResolution } from "../gamelogic/war.js";
 import { handleWar } from "../gamelogic/war.js";
-import { publishGameLog } from "../../client/index.js";
+import { publishGameLog } from "./pub.js";
 
 export type AckType = "ack" | "nack_requeue" | "nack_discard";
 

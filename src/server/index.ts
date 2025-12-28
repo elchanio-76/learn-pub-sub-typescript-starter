@@ -4,6 +4,10 @@ import { ExchangePerilDirect, PauseKey, ExchangePerilTopic, GameLogSlug } from "
 import type { PlayingState } from "../internal/gamelogic/gamestate.js";
 import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
 import { declareAndBind, setupExchanges } from "../internal/pubsub/queue.js";
+import { subscribeMsgPack } from "../internal/pubsub/consume.js";
+import { writeLog, type GameLog } from "../internal/gamelogic/logs.js";
+import { decode } from "@msgpack/msgpack";
+import { type SimpleQueueType } from "../internal/pubsub/queue.js";
 
 async function main() {
   console.log("Starting Peril server...");
@@ -27,7 +31,14 @@ async function main() {
   const confirmChannel = await connection.createConfirmChannel();
   let state:PlayingState = { isPaused: true };
 
-  declareAndBind(connection,ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`,  "durable")
+  // Subscribe to the logs queue
+  subscribeMsgPack(connection, ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`, "durable", (data: GameLog) => {
+    writeLog(data);
+    return "ack";
+  }, (data) => {
+    const decoded:GameLog = decode(data) as GameLog;   
+    return decoded;
+  });
 
   while(true) {
     let words = await getInput();

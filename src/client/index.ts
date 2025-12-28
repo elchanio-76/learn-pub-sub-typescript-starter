@@ -64,15 +64,7 @@ async function main() {
   process.exit(0);
 }
 
-export async function publishGameLog(ch:amqp.ConfirmChannel, username: string, message: string): Promise<boolean> {
-  const gameLog: GameLog = { 
-    username: username, 
-    message: message,
-    currentTime: new Date()
-  };
-  return await publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${username}`, gameLog);
 
-}
 
 
 main().catch((err) => {

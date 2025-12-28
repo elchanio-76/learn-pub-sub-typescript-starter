@@ -1,6 +1,8 @@
 
 import amqp from "amqplib";
 import { encode, decode } from "@msgpack/msgpack";
+import { ExchangePerilTopic, GameLogSlug } from "../routing/routing.js";
+import type { GameLog } from "../gamelogic/logs.js";
 
 export async function publishJSON<T>(
   ch: amqp.ConfirmChannel,
@@ -32,4 +34,14 @@ export async function publishMsgPack<T>(
     Buffer.from(encodedData),
     { contentType: "application/x-msgpack" }
   );
+}
+
+export async function publishGameLog(ch:amqp.ConfirmChannel, username: string, message: string): Promise<boolean> {
+  const gameLog: GameLog = { 
+    username: username, 
+    message: message,
+    currentTime: new Date()
+  };
+  return await publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${username}`, gameLog);
+
 }
